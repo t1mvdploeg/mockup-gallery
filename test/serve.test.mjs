@@ -153,3 +153,15 @@ test('run state lives outside the gallery and a planted .run.json is ignored by 
     child.kill();
   }
 });
+
+test('run state lives in a per-user folder, not the shared temp dir', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mg-state-'));
+  writeRun(dir, { serve: { pid: 1, url: 'x' } });
+  const stateDir = path.join(os.homedir(), '.cache', 'mockup-gallery');
+  const files = fs.readdirSync(stateDir).filter((f) => f.endsWith('.json'));
+  assert.ok(files.length > 0);
+  assert.ok(!fs.readdirSync(stateDir).some((f) => f.endsWith('.tmp')));
+  assert.deepEqual(readRun(dir), { serve: { pid: 1, url: 'x' } });
+  clearRun(dir, 'serve');
+  assert.deepEqual(readRun(dir), {});
+});

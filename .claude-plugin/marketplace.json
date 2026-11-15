@@ -1,0 +1,15 @@
+{
+  "name": "mockup-gallery",
+  "description": "Collect design mockup variants per round in a browsable local gallery you can share.",
+  "owner": {
+    "name": "Tim van der Ploeg",
+    "url": "https://github.com/t1mvdploeg"
+  },
+  "plugins": [
+    {
+      "name": "mockup-gallery",
+      "source": "./",
+      "description": "Collect design mockup variants per round in a browsable local gallery you can share."
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "mockup-gallery",
+  "version": "0.1.0",
+  "description": "Collect design mockup variants per round in a browsable local gallery you can share.",
+  "author": { "name": "Tim van der Ploeg" },
+  "repository": "https://github.com/t1mvdploeg/mockup-gallery"
+}

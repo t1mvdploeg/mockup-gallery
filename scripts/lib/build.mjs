@@ -32,6 +32,5 @@ export function buildGallery(projectRoot, { now = new Date(), shoot = screenshot
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'index.html');
   fs.writeFileSync(file, renderGallery(m, files, { now }));
-  fs.writeFileSync(path.join(dir, '.gitignore'), '.run.json\n');
   return { file, warnings };
 }

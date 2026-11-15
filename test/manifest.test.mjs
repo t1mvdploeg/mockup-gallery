@@ -79,3 +79,22 @@ test('cli round', () => {
     assert.ok(fs.existsSync(path.join(root, 'mockups', 'gallery', 'logo', 'round-1', l)));
   }
 });
+
+test('loadManifest rejects path-traversal fields and accepts a valid manifest', () => {
+  const dir = tmp();
+  const write = (slug, label) =>
+    fs.writeFileSync(
+      path.join(dir, 'gallery.json'),
+      JSON.stringify({
+        categories: [{ slug, rounds: [{ n: 1, variants: [{ label }] }] }],
+      }),
+    );
+  write('logo', '1A');
+  assert.equal(loadManifest(dir).categories[0].slug, 'logo');
+  write('../x', '1A');
+  assert.throws(() => loadManifest(dir), /invalid category slug/);
+  write('logo', '1A/../../x');
+  assert.throws(() => loadManifest(dir), /invalid variant label/);
+  write('logo', '2A');
+  assert.throws(() => loadManifest(dir), /invalid variant label/);
+});

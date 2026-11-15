@@ -87,7 +87,7 @@ test('CLI share records both pids; stop ends the tunnel even after SIGKILL of sh
       s.on('close', r);
     });
     assert.ok(await until(() => !alive(share.tunnelPid)), 'tunnel still alive');
-    assert.equal(fs.existsSync(path.join(dir, '.run.json')), false);
+    assert.deepEqual(readRun(dir), {});
   } finally {
     p.kill('SIGKILL');
   }

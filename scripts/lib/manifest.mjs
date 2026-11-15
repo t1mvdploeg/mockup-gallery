@@ -18,10 +18,33 @@ export function loadManifest(dir) {
     // dir is <projectRoot>/mockups/gallery
     return { version: 1, project: path.basename(path.resolve(dir, '..', '..')), categories: [] };
   }
+  let m;
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    m = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
     throw new Error(`gallery.json is not valid JSON: ${e.message}`);
+  }
+  validate(m);
+  return m;
+}
+
+// These fields become folder names, so they must not be able to leave the gallery folder.
+function validate(m) {
+  for (const c of m?.categories ?? []) {
+    if (typeof c.slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.slug))
+      throw new Error(`gallery.json has an invalid category slug: ${JSON.stringify(c.slug)}`);
+    for (const r of c.rounds ?? []) {
+      if (!Number.isInteger(r.n) || r.n < 1)
+        throw new Error(`gallery.json has an invalid round number: ${JSON.stringify(r.n)}`);
+      for (const v of r.variants ?? [])
+        if (
+          typeof v.label !== 'string' ||
+          !/^\d+[A-Z]$/.test(v.label) ||
+          !v.label.startsWith(String(r.n)) ||
+          v.label.length !== String(r.n).length + 1
+        )
+          throw new Error(`gallery.json has an invalid variant label: ${JSON.stringify(v.label)}`);
+    }
   }
 }
 
@@ -49,5 +72,12 @@ export function addRound(m, { category, note, authors, now }) {
   return { round, categorySlug };
 }
 
-export const roundDir = (dir, slug, n) => path.join(dir, slug, `round-${n}`);
-export const variantDir = (dir, slug, n, label) => path.join(roundDir(dir, slug, n), label);
+const inside = (dir, p) => {
+  const rel = path.relative(path.resolve(dir), path.resolve(p));
+  if (rel.startsWith('..') || path.isAbsolute(rel))
+    throw new Error(`path escapes the gallery folder: ${p}`);
+  return p;
+};
+export const roundDir = (dir, slug, n) => inside(dir, path.join(dir, slug, `round-${n}`));
+export const variantDir = (dir, slug, n, label) =>
+  inside(dir, path.join(roundDir(dir, slug, n), label));

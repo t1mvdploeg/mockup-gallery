@@ -6,7 +6,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { startServer } from '../scripts/lib/serve.mjs';
-import { readRun, writeRun } from '../scripts/lib/run-file.mjs';
+import { readRun, writeRun, clearRun } from '../scripts/lib/run-file.mjs';
 
 const CLI = path.resolve('scripts/gallery.mjs');
 
@@ -16,7 +16,7 @@ function tmpProject() {
   fs.mkdirSync(path.join(dir, 'logo', 'round-1', '1A'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'index.html'), '<h1>hi</h1>');
   fs.writeFileSync(path.join(dir, 'gallery.json'), '{}');
-  fs.writeFileSync(path.join(dir, '.run.json'), '{}');
+  fs.writeFileSync(path.join(dir, '.secret.json'), '{}');
   fs.writeFileSync(path.join(dir, 'logo', 'round-1', '1A', 'screenshot.png'), 'x');
   fs.writeFileSync(path.join(root, 'mockups', 'secret.txt'), 'secret');
   return { root, dir };
@@ -47,7 +47,7 @@ test('serves the gallery and nothing else', async () => {
     for (const p of [
       '/../secret.txt',
       '/%2e%2e/secret.txt',
-      '/.run.json',
+      '/.secret.json',
       '/logo/%2e/x',
       '/%5c..%5csecret.txt',
       '/%zz',
@@ -59,7 +59,7 @@ test('serves the gallery and nothing else', async () => {
   }
 });
 
-test('stop kills recorded processes and deletes .run.json', async () => {
+test('stop kills recorded processes and clears the run state', async () => {
   const { root, dir } = tmpProject();
   const child = spawn(process.execPath, ['-e', 'setInterval(()=>{},1e3)'], { stdio: 'ignore' });
   const exited = new Promise((r) => child.once('exit', r));
@@ -122,20 +122,34 @@ test('Windows 8.3 short name of a dotfile is a 404', async (t) => {
   const { dir } = tmpProject();
   const { server, url } = await startServer(dir);
   try {
-    assert.equal((await get(url, '/RUN~1.JSO')).statusCode, 404);
+    assert.equal((await get(url, '/SECRET~1.JSO')).statusCode, 404);
   } finally {
     server.close();
   }
 });
 
-test('stop ignores invalid pids in .run.json', async () => {
+test('stop ignores invalid pids in the run state', async () => {
   const { root, dir } = tmpProject();
-  fs.writeFileSync(
-    path.join(dir, '.run.json'),
-    JSON.stringify({ serve: { pid: -1, url: 'x' }, share: { pid: '12', tunnelPid: 0 } }),
-  );
+  writeRun(dir, { serve: { pid: -1, url: 'x' }, share: { pid: '12', tunnelPid: 0 } });
   const code = await new Promise((resolve) =>
     spawn(process.execPath, [CLI, 'stop', '--project', root]).on('close', resolve),
   );
   assert.equal(code, 0);
+});
+
+test('run state lives outside the gallery and a planted .run.json is ignored by stop', async () => {
+  const { root, dir } = tmpProject();
+  writeRun(dir, { serve: { pid: 0, url: 'x' } });
+  assert.equal(fs.existsSync(path.join(dir, '.run.json')), false);
+  clearRun(dir, 'serve');
+  const child = spawn(process.execPath, ['-e', 'setInterval(()=>{},1e3)'], { stdio: 'ignore' });
+  try {
+    fs.writeFileSync(path.join(dir, '.run.json'), JSON.stringify({ serve: { pid: child.pid } }));
+    await new Promise((resolve) =>
+      spawn(process.execPath, [CLI, 'stop', '--project', root]).on('close', resolve),
+    );
+    process.kill(child.pid, 0); // throws if stop killed it
+  } finally {
+    child.kill();
+  }
 });

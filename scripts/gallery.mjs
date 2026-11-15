@@ -13,7 +13,7 @@ import {
 import { buildGallery } from './lib/build.mjs';
 import { startServer } from './lib/serve.mjs';
 import { startTunnel } from './lib/share.mjs';
-import { readRun, writeRun, clearRun } from './lib/run-file.mjs';
+import { readRun, writeRun, clearRun, clearRunFile } from './lib/run-file.mjs';
 
 const USAGE = `Usage:
   gallery.mjs round --category <name> --note <text> --authors <A,B,C> [--project <root>]
@@ -107,7 +107,7 @@ async function share(args) {
     console.log('Already shared. Stop it with: gallery.mjs stop');
     return;
   }
-  // Always our own server: never tunnel a URL read from .run.json, never touch the serve entry.
+  // Always our own server: never tunnel a URL read from the run state, never touch the serve entry.
   const { url: local } = await startServer(dir);
   let tunnel;
   try {
@@ -157,7 +157,7 @@ function stop(args) {
     }
   }
   // Windows kills without running signal handlers, so delete the file here.
-  fs.rmSync(path.join(dir, '.run.json'), { force: true });
+  clearRunFile(dir);
   if (!targets.some(([, pid]) => okPid(pid))) console.log('nothing running');
 }
 

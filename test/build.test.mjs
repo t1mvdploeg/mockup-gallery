@@ -32,10 +32,7 @@ test('build writes the page and warns about outside references', () => {
   assert.match(warnings[0], /1A/);
   assert.equal(file, path.join(root, 'mockups', 'gallery', 'index.html'));
   assert.ok(fs.readFileSync(file, 'utf8').includes('1B'));
-  assert.equal(
-    fs.readFileSync(path.join(root, 'mockups', 'gallery', '.gitignore'), 'utf8').trim(),
-    '.run.json',
-  );
+  assert.equal(fs.existsSync(path.join(root, 'mockups', 'gallery', '.gitignore')), false);
   assert.deepEqual(shot, [
     [path.join(v, '1A', 'index.html'), path.join(v, '1A', 'screenshot.png')],
   ]);
